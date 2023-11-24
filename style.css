@@ -1,0 +1,52 @@
+button, input[type="submit"], input[type="reset"] {
+	background: none;
+	color: inherit;
+	border: none;
+	padding: 0;
+	font: inherit;
+	cursor: pointer;
+	outline: inherit;
+}
+
+body {
+    box-sizing: border-box;
+    text-align: center;
+    justify-content: center;
+    width: 350px;
+}
+
+#getClrs{
+    width:100%;
+    color: white;
+    background: black;
+    border-radius: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    min-height: 30px;
+}
+
+#copied{
+    font-weight: bold;
+    text-shadow: 1px 1px 2px black;
+}
+
+.list-el{
+    display:flex;
+    flex-direction: row;
+    font-size: large;
+    text-shadow: 1px 1px 2px black;
+}
+
+.list-el__color-cube{
+    border: 1px solid black;
+    width: 20px;
+    height:20px;
+}
+
+.list-el__text{
+    text-align: center;
+}
+
+.list-el:hover{
+    cursor: pointer;
+}
