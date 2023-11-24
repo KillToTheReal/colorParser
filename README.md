@@ -6,8 +6,8 @@
 
 ### TODO :
 
-[x] Fetch all colors from page
-[x] List all colors and their frequency
-[x] Copy colors to clipboard on click
-[ ] Fetch image urls from page
-[ ] Fetch fonts (?)
+- [x] Fetch all colors from page
+- [x] List all colors and their frequency
+- [x] Copy colors to clipboard on click
+- [ ] Fetch image urls from page
+- [ ] Fetch fonts (?)
