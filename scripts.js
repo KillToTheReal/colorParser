@@ -1,20 +1,31 @@
-// Handles color parsing START --------------
-const getBtn = document.getElementById("getClrs");
-const copied = document.getElementById("copied");
-const ulList = document.getElementById("colList");
+//Constant elements
+const clrBtn = document.getElementById("getClrs");
+// Message if color is copied to clipboard
+const copiedColorMessage = document.getElementById("copied");
+// Message if img is copied to clipboard
+const copiedImageMessage = document.getElementById("imgCopied");
+// List of colors
+const colorList = document.getElementById("colList");
+// List of images
 const imgList = document.getElementById("imageList");
-getBtn.addEventListener("click", () => {
-  copied.style.display = "none";
 
-  ulList.innerHTML = "";
+// Handles color parsing START --------------
+clrBtn.addEventListener("click", () => {
+  copiedImageMessage.style.display = "none";
+  copiedColorMessage.style.display = "none";
+  colorList.innerHTML = "";
   imgList.innerHTML = "";
+
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (tab) {
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: grabColors,
-      });
+      chrome.scripting.executeScript(
+        {
+          target: { tabId: tab.id },
+          func: grabColors,
+        },
+        afterClr
+      );
     } else {
       alert("No active tabs");
     }
@@ -22,7 +33,7 @@ getBtn.addEventListener("click", () => {
 });
 
 function grabColors() {
-  // Turns Js property color to hex;
+  //Turns Js property color to hex;
   function parseColor(color) {
     // if we are getting hex
     if (color.indexOf("#") != -1) return color;
@@ -32,7 +43,6 @@ function grabColors() {
     });
     return "#" + arr.slice(0, 3).map(toHex).join("");
   }
-
   // Int to HEX
   function toHex(int) {
     var hex = int.toString(16);
@@ -74,43 +84,46 @@ function grabColors() {
   recursiveParse(document.body, colorsStorage);
 
   // To sort object by values
-  let sortable = [];
+  let colorsSorted = [];
   for (let color in colorsStorage) {
-    sortable.push([color, colorsStorage[color]]);
+    colorsSorted.push([color, colorsStorage[color]]);
   }
-  sortable.sort(function (a, b) {
+  colorsSorted.sort(function (a, b) {
     return b[1] - a[1];
   });
 
-  // Getting gathered sorted data out of chrome.ExecuteScript context to parse list in ext window context
-  chrome.runtime.sendMessage({ sortableData: sortable });
+  return colorsSorted;
 }
 
-// Getting values from colorGrabber
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.sortableData) {
-    const colorData = request.sortableData;
-    processColorData(colorData);
-    // Just in case
-    sendResponse({ received: true });
-  }
-});
-
+// START https://stackoverflow.com/questions/13070054/convert-rgb-strings-to-hex-in-javascript -------
 function parseColor(color) {
+  //if we getting hex string
+  if (color.indexOf("#") != -1) return color;
   var arr = [];
   color.replace(/[\d+\.]+/g, function (v) {
     arr.push(parseFloat(v));
   });
   return "#" + arr.slice(0, 3).map(toHex).join("");
 }
-
 // Int to HEX
 function toHex(int) {
   var hex = int.toString(16);
   return hex.length == 1 ? "0" + hex : hex;
 }
-
-function processColorData(data) {
+// END https://stackoverflow.com/questions/13070054/convert-rgb-strings-to-hex-in-javascript -------
+/**
+ * Runs after grabColors, gets one frame of page
+ * @param {[]InjectionResult} frame array of results of grabColors
+ */
+function afterClr(frames) {
+  if (!frames || !frames.length) {
+    alert(
+      "Could not retrieve colors from specified page (probably it's google base page)"
+    );
+    return;
+  }
+  // All frames to one array
+  const data = frames.map((frame) => frame.result)[0];
   for (let color of data) {
     const ul = document.getElementById("colList");
     const li = document.createElement("li");
@@ -126,8 +139,8 @@ function processColorData(data) {
     i.addEventListener("click", function () {
       const color = parseColor(this.style.color);
       window.navigator.clipboard.writeText(color);
-      copied.style.display = "block";
-      copied.style.color = color;
+      copiedColorMessage.style.display = "block";
+      copiedColorMessage.style.color = color;
     });
   }
 }
@@ -135,14 +148,16 @@ function processColorData(data) {
 // Handles image parsing START --------------
 const grabImg = document.getElementById("getImg");
 grabImg.addEventListener("click", () => {
-  ulList.innerHTML = "";
+  colorList.innerHTML = "";
   imgList.innerHTML = "";
+  copiedColorMessage.style.display = "none";
+  copiedImageMessage.style.display = "none";
   chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     var tab = tabs[0];
     if (tab) {
       chrome.scripting.executeScript(
         {
-          target: { tabId: tab.id },
+          target: { tabId: tab.id, allFrames: true },
           func: grabImages,
         },
         onImgResult
@@ -159,37 +174,38 @@ function grabImages() {
 }
 
 /**
- * Выполняется после того как вызовы grabImages
- * выполнены во всех фреймах удаленной web-страницы.
- * Функция объединяет результаты в строку и копирует
- * список путей к изображениям в буфер обмена
- *
- * @param {[]InjectionResult} frames Массив результатов
- * функции grabImages
+ * runs after grabImages is done on all frames of webpage
+ * @param {[]InjectionResult} frames -- Array of grabImages() results
  */
 function onImgResult(frames) {
   // Если результатов нет
   if (!frames || !frames.length) {
-    alert("Could not retrieve images from specified page");
+    alert(
+      "Could not retrieve images from specified page (probably it's google base page)"
+    );
     return;
   }
-  // Объединить списки URL из каждого фрейма в один массив
+  // Unite all urls from all frames to one array
   const imageUrls = frames
     .map((frame) => frame.result)
     .reduce((r1, r2) => r1.concat(r2));
 
   const imageSet = new Set(imageUrls);
   const uniqueUrls = Array.from(imageSet);
-  // Скопировать в буфер обмена полученный массив
-  // объединив его в строку, используя символ перевода строки
-  // как разделитель
+
   for (let image of uniqueUrls) {
     const div = document.createElement("div");
     div.classList.add("img-list-el");
-    div.innerHTML = ` <img height="40" width="40" src="${image}">`;
+    div.innerHTML = ` <img class="img-list-el__clickable" height="50" width="50"  src="${image}">`;
     imgList.appendChild(div);
   }
-  window.navigator.clipboard
-    .writeText(uniqueUrls.join("\n\n\n"))
-    .then(() => {});
+
+  let images = document.querySelectorAll("img.img-list-el__clickable");
+  for (i of images) {
+    i.addEventListener("click", function () {
+      const url = this.getAttribute("src");
+      window.navigator.clipboard.writeText(url);
+      copiedImageMessage.style.display = "block";
+    });
+  }
 }

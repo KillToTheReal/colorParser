@@ -9,5 +9,7 @@
 - [x] Fetch all colors from page
 - [x] List all colors and their frequency
 - [x] Copy colors to clipboard on click
-- [ ] Fetch image urls from page
+- [x] Fetch image URLs from page
+- [x] Copy image URLs to clipboard on click
 - [ ] Fetch fonts (?)
+- [ ] Fetch SVG from page
