@@ -1,3 +1,8 @@
+*{
+    padding:0;
+    margin:0;
+}
+
 button, input[type="submit"], input[type="reset"] {
 	background: none;
 	color: inherit;
@@ -15,7 +20,33 @@ body {
     width: 350px;
 }
 
+.additional-btns{
+    display:flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.half_btn{
+    width:49%;
+    color: white;
+    background: black;
+    border-radius: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    min-height: 30px; 
+}
+
+
+#colList{
+    display:flex;
+    flex-direction: column;
+    align-items: start;
+    margin-left: 10px;
+    margin-bottom: 10px;
+}
+
 #getClrs{
+    margin-top:5px;
     width:100%;
     color: white;
     background: black;
@@ -28,6 +59,20 @@ body {
 #copied{
     font-weight: bold;
     text-shadow: 1px 1px 2px black;
+}
+
+#imageList{
+    display:flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.img-list-el
+{
+    border: 1px solid black;
+    margin-left:5px;
+    margin-top: 5px;
+    display:flex;
 }
 
 .list-el{

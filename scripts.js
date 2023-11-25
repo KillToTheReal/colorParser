@@ -1,12 +1,14 @@
-// Handles your frontend UI logic.
+// Handles color parsing START --------------
 const getBtn = document.getElementById("getClrs");
 const copied = document.getElementById("copied");
+const ulList = document.getElementById("colList");
+const imgList = document.getElementById("imageList");
 getBtn.addEventListener("click", () => {
   copied.style.display = "none";
-  copied.style.color = "#000";
-  const ul = document.getElementById("colList");
-  ul.innerHTML = "";
-  chrome.tabs.query({ active: true }, (tabs) => {
+
+  ulList.innerHTML = "";
+  imgList.innerHTML = "";
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (tab) {
       chrome.scripting.executeScript({
@@ -22,6 +24,8 @@ getBtn.addEventListener("click", () => {
 function grabColors() {
   // Turns Js property color to hex;
   function parseColor(color) {
+    // if we are getting hex
+    if (color.indexOf("#") != -1) return color;
     var arr = [];
     color.replace(/[\d+\.]+/g, function (v) {
       arr.push(parseFloat(v));
@@ -40,15 +44,25 @@ function grabColors() {
       // If we getting window instead of element
       return colorStorage;
     }
-    const bgCol = parseColor(window.getComputedStyle(element).backgroundColor);
-    const col = parseColor(window.getComputedStyle(element).color);
+    // Check if we have inline style and this inline style is not a mixin
+    const bgCol =
+      element.style.backgroundColor &&
+      !element.style.backgroundColor.includes("var")
+        ? parseColor(element.style.backgroundColor)
+        : parseColor(window.getComputedStyle(element).backgroundColor);
 
+    const col =
+      element.style.color && !element.style.color.includes("var")
+        ? parseColor(element.style.color)
+        : parseColor(window.getComputedStyle(element).color);
+
+    //Add a field or increase it
     !colorStorage[bgCol]
       ? (colorStorage[bgCol] = 1)
       : (colorStorage[bgCol] += 1);
 
     !colorStorage[col] ? (colorStorage[col] = 1) : (colorStorage[col] += 1);
-
+    // Next iteration if we have where to go
     if (element.children.length > 0) {
       for (let i = 0; i < element.children.length; i++) {
         recursiveParse(element.children[i], colorStorage);
@@ -72,9 +86,9 @@ function grabColors() {
   chrome.runtime.sendMessage({ sortableData: sortable });
 }
 
+// Getting values from colorGrabber
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.sortableData) {
-    // Getting data from google tab script
     const colorData = request.sortableData;
     processColorData(colorData);
     // Just in case
@@ -116,4 +130,66 @@ function processColorData(data) {
       copied.style.color = color;
     });
   }
+}
+// Handles color parsing END --------------
+// Handles image parsing START --------------
+const grabImg = document.getElementById("getImg");
+grabImg.addEventListener("click", () => {
+  ulList.innerHTML = "";
+  imgList.innerHTML = "";
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    var tab = tabs[0];
+    if (tab) {
+      chrome.scripting.executeScript(
+        {
+          target: { tabId: tab.id },
+          func: grabImages,
+        },
+        onImgResult
+      );
+    } else {
+      alert("There are no active tabs");
+    }
+  });
+});
+
+function grabImages() {
+  const images = document.querySelectorAll("img");
+  return Array.from(images).map((image) => image.src);
+}
+
+/**
+ * Выполняется после того как вызовы grabImages
+ * выполнены во всех фреймах удаленной web-страницы.
+ * Функция объединяет результаты в строку и копирует
+ * список путей к изображениям в буфер обмена
+ *
+ * @param {[]InjectionResult} frames Массив результатов
+ * функции grabImages
+ */
+function onImgResult(frames) {
+  // Если результатов нет
+  if (!frames || !frames.length) {
+    alert("Could not retrieve images from specified page");
+    return;
+  }
+  // Объединить списки URL из каждого фрейма в один массив
+  const imageUrls = frames
+    .map((frame) => frame.result)
+    .reduce((r1, r2) => r1.concat(r2));
+
+  const imageSet = new Set(imageUrls);
+  const uniqueUrls = Array.from(imageSet);
+  // Скопировать в буфер обмена полученный массив
+  // объединив его в строку, используя символ перевода строки
+  // как разделитель
+  for (let image of uniqueUrls) {
+    const div = document.createElement("div");
+    div.classList.add("img-list-el");
+    div.innerHTML = ` <img height="40" width="40" src="${image}">`;
+    imgList.appendChild(div);
+  }
+  window.navigator.clipboard
+    .writeText(uniqueUrls.join("\n\n\n"))
+    .then(() => {});
 }
